@@ -83,9 +83,9 @@ ledger intact: 3 blocks, chain verified
 block types: {"declaration": 1, "observation_batch": 1, "report": 1}
 ```
 
-An intact ledger proves the recorded evidence has not changed, not that the
-observations are free of findings. You can also replace `mcp-ev-validate`
-with `python -m mcp_evidence_validator` in either command above.
+The `verify` command checks the ledger's internal hash-chain consistency,
+not whether the observations are free of findings. You can also replace
+`mcp-ev-validate` with `python -m mcp_evidence_validator` in either command above.
 
 ## Concepts
 
