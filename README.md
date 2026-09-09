@@ -26,7 +26,7 @@ The **declared-vs-observed gap** is the measurement finding that matters. This v
 1. **Captures declarations** - the tool schemas, permissions, and annotations an MCP server publishes.
 2. **Observes reality** - the tool invocations, argument shapes, and contract hashes seen at runtime.
 3. **Checks the gap** - declared annotation still bound? Contract mutated since declaration? Privilege use inside declared scope?
-4. **Produces a tamper-evident ledger** - every check result is committed to a SHA-256 hash chain. Changing any earlier record invalidates every record after it.
+4. **Produces an anchored evidence ledger** - every check result is committed to a SHA-256 hash chain, and `validate` prints the head digest of that chain. Record the head somewhere the ledger file's holder cannot edit, and `verify` refuses any ledger that does not reach it. A chain read on its own proves ordering to whoever holds the file and nothing to anyone else: an editor who can change a record can replay the chain over the change, drop the last block, or publish any `prev_hash` and `index` they like.
 
 ## Install
 
@@ -43,19 +43,24 @@ No dependencies — Python 3.10+ standard library only.
 ## Quick start
 
 ```bash
-# Compare a declared manifest against observed runtime records
+# Compare a declared manifest against observed runtime records, and write the
+# head digest of the resulting ledger to a separate file
 mcp-ev-validate validate \
     --declared examples/fictional-server-declared.json \
     --observed examples/fictional-server-observed.json \
-    --out /tmp/evidence.json
+    --out /tmp/evidence.json \
+    --head-out /tmp/evidence.head
 
-# Audit a ledger later: prove no record was altered
-mcp-ev-validate verify --ledger /tmp/evidence.json
+# Audit a ledger later, against the head you kept elsewhere
+mcp-ev-validate verify --ledger /tmp/evidence.json \
+    --expected-head "$(cat /tmp/evidence.head)"
 ```
+
+`--expected-head` is required. Keep the head where the ledger's holder cannot reach it: a signature, a commit in another repository, a transparency log entry, or a line in the auditor's own notes.
 
 Or run as a module: `python -m mcp_evidence_validator validate --declared ...`
 
-Output is a machine-readable evidence record with a `chain` of hash-linked entries plus a human-readable `findings` summary. The `verify` subcommand replays the hash chain and reports any corruption — try editing `/tmp/evidence.json` and re-verifying.
+Output is a machine-readable evidence record with a `chain` of hash-linked entries plus a human-readable `findings` summary. The `verify` subcommand replays the chain, checks the published `prev_hash` and `index` of every block against that walk, and compares the head it reaches to the one you pass in. Try editing `/tmp/evidence.json` and re-verifying against the original head.
 
 ## Concepts
 

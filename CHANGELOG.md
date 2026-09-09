@@ -4,6 +4,18 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Breaking.** `verify` requires `--expected-head`, the head digest recorded outside the ledger. A ledger that does not reach that head is refused.
+- **Breaking.** `Ledger.verify` takes `expected_head` as an argument. Pass the new `UNANCHORED` constant for chain self-consistency alone.
+- `Ledger.verify` compares each block's published `prev_hash` and `index` against the chain walk and reports every disagreement, instead of recomputing both and comparing only `hash`.
+- `Ledger.verify` reports every problem it finds rather than returning at the first hash mismatch.
+
+### Added
+- `Ledger.head()`, and `validate --head-out PATH` to write that digest to a separate file. `validate` also prints it to stderr.
+- `tests/test_ledger_forgery.py`: a full-rewrite forgery, a tail truncation that removes a high-severity finding, and a ledger whose published `prev_hash` and `index` are falsified. Each verified clean before this change.
+
 ## [0.2.1] - 2026-08-18
 
 ### Added
