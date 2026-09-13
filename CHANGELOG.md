@@ -4,7 +4,13 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-09-13
+
+### Fixed
+- A self-describing ledger verified three forgeries clean, all of which now fail: a chain replayed over a rewritten record, a truncated chain that dropped the last block (and with it a high-severity finding), and a chain whose published `prev_hash` and `index` were falsified. `verify` now requires the head digest recorded outside the ledger and checks every published field against the chain walk. Reported by [@astrogilda](https://github.com/astrogilda) in [#20](https://github.com/narko4u/mcp-evidence-validator/issues/20); fixed in [#21](https://github.com/narko4u/mcp-evidence-validator/pull/21).
+
+### Security
+- The README claim that a changed record "invalidates every record after it" held only for a naive edit. It is replaced by the accuracy requirement: a chain read on its own proves ordering to whoever holds the file and nothing to anyone else. See the tamper-evidence note in `SECURITY.md` and `Ledger.verify(UNANCHORED)`.
 
 ### Changed
 - **Breaking.** `verify` requires `--expected-head`, the head digest recorded outside the ledger. A ledger that does not reach that head is refused.
