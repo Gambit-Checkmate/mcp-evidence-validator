@@ -2,10 +2,11 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-| < 0.2   | :x: (prototype)    |
+| Version | Supported                                       |
+| ------- | ----------------------------------------------- |
+| 0.3.x   | :white_check_mark:                              |
+| 0.2.x   | :white_check_mark: (90 days after 0.3.0 ships)  |
+| < 0.2   | :x: (prototype)                                 |
 
 ## Reporting a Vulnerability
 
@@ -34,6 +35,27 @@ The ledger's integrity depends on SHA-256. If you believe you have found a
 weakness in the hash-chain construction, the canonical-JSON encoding, or the
 verification logic, report it under this policy — that class of bug is the
 highest-priority finding for this project.
+
+### What the chain proves on its own
+
+A hash chain proves ordering to whoever holds the file, and nothing to anyone
+else. An editor who can change a record can also replay the chain over the
+change, drop the last block, or publish any `prev_hash` and `index` values they
+like. Verification therefore requires a head digest committed somewhere the
+ledger's holder cannot reach — a signature, a commit in another repository, a
+transparency-log entry, or a line in the auditor's own notes.
+
+`Ledger.verify(expected_head)` enforces that: pass the head recorded outside the
+ledger and every disagreement is reported. `Ledger.verify(UNANCHORED)` is the
+deliberate exception. It checks chain self-consistency and nothing more — it is
+**not** an integrity claim, the
+command-line interface cannot produce it, and a consumer that relies on it is
+trusting the file's holder. Treat any evidence path that ends in `UNANCHORED`
+as self-asserted.
+
+This is why the tool reports an anchored head rather than "tamper-evident" on
+its own: the anchor is the evidence, and where the anchor lives is the
+auditor's decision to make.
 
 ## Secrets and credentials policy
 
