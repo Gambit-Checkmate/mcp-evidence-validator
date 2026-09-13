@@ -126,7 +126,8 @@ def test_cli_validate_and_verify(tmp_path):
     data = json.loads(out.read_text())
     assert data["ledger"] == "mcp-evidence-validator"
 
-    rc = main(["verify", "--ledger", str(out)])
+    head = json.loads(out.read_text())["blocks"][-1]["hash"]
+    rc = main(["verify", "--ledger", str(out), "--expected-head", head])
     assert rc == 0
 
 
@@ -140,11 +141,12 @@ def test_cli_verify_detects_tamper(tmp_path):
     observed.write_text(json.dumps(make_observed([])))
     main(["validate", "--declared", str(declared), "--observed", str(observed), "--out", str(out)])
 
+    head = load_json(str(out))["blocks"][-1]["hash"]
     data = load_json(str(out))
     data["blocks"][0]["record"]["server"] = "tampered"
     out.write_text(json.dumps(data))
 
-    rc = main(["verify", "--ledger", str(out)])
+    rc = main(["verify", "--ledger", str(out), "--expected-head", head])
     assert rc != 0
 
 

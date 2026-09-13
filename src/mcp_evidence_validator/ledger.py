@@ -1,9 +1,15 @@
-"""Tamper-evident ledger: append-only SHA-256 hash chain.
+"""Evidence ledger: append-only SHA-256 hash chain, verified against an
+externally held head.
 
 block_n = sha256(prev_hash + canonical_json(record_n))
 
-Any mutation to a past record changes its hash and therefore every
-later block, so a forged or edited ledger is detectable in one pass.
+A hash chain proves ordering to whoever holds the file. It proves nothing to
+anyone else, because an editor who can change a record can also replay the
+chain over the change, drop the last block, or write any value into the
+published ``prev_hash`` and ``index`` fields. Detection therefore requires two
+things the chain cannot supply on its own: a head digest committed somewhere
+the editor cannot reach, and a walk that reads the fields the format
+publishes. ``verify`` takes the expected head as an argument for that reason.
 """
 
 import hashlib
@@ -13,6 +19,11 @@ from typing import Any
 from .fingerprint import canonical_json
 
 GENESIS = "sha256:" + ("0" * 64)
+
+#: Passed as ``expected_head`` by a caller that deliberately has no external
+#: commitment to the head. It buys chain self-consistency and nothing more, and
+#: the command-line interface has no way to produce it.
+UNANCHORED = "unanchored"
 
 LEDGER_NAME = "mcp-evidence-validator"
 LEDGER_VERSION = "0.2"
@@ -50,19 +61,40 @@ class Ledger:
         self._blocks.append(block)
         return block
 
-    def verify(self) -> list[str]:
-        """Return a list of corruption messages (empty when intact)."""
+    def head(self) -> str:
+        """Return the hash of the last block, or GENESIS for an empty ledger."""
+        return self._blocks[-1]["hash"] if self._blocks else GENESIS
+
+    def verify(self, expected_head: str) -> list[str]:
+        """Return a list of problem messages (empty when the ledger is sound).
+
+        ``expected_head`` is the head digest recorded outside this file, as
+        printed by ``validate``. Pass :data:`UNANCHORED` to skip that check and
+        get chain self-consistency alone.
+        """
         problems = []
         prev_hash = GENESIS
-        for block in self._blocks:
+        for position, block in enumerate(self._blocks):
+            if block["index"] != position:
+                problems.append(
+                    f"block at position {position}: index field says {block['index']!r}"
+                )
+            if block["prev_hash"] != prev_hash:
+                problems.append(
+                    f"block at position {position}: prev_hash field says "
+                    f"{block['prev_hash']!r}, chain walk says {prev_hash!r}"
+                )
             body = canonical_json({"type": block["type"], "record": block["record"]})
             expected = "sha256:" + hashlib.sha256(
                 (prev_hash + body).encode("utf-8")
             ).hexdigest()
             if block["hash"] != expected:
-                problems.append(f"block {block['index']}: hash mismatch")
-                return problems
+                problems.append(f"block at position {position}: hash mismatch")
             prev_hash = block["hash"]
+        if expected_head != UNANCHORED and prev_hash != expected_head:
+            problems.append(
+                f"head mismatch: ledger head {prev_hash!r}, expected {expected_head!r}"
+            )
         return problems
 
     def dump(self, path: str) -> None:

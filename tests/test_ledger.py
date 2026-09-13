@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from mcp_evidence_validator import GENESIS, Ledger
+from mcp_evidence_validator import GENESIS, UNANCHORED, Ledger
 
 
 def test_genesis_constant():
@@ -16,7 +16,7 @@ def test_append_chains_hashes():
     led.append("declaration", {"a": 1})
     led.append("observation", {"b": 2})
     assert len(led) == 2
-    assert led.verify() == []
+    assert led.verify(UNANCHORED) == []
     assert led._blocks[0]["prev_hash"] == GENESIS
     assert led._blocks[1]["prev_hash"] == led._blocks[0]["hash"]
 
@@ -25,10 +25,10 @@ def test_tamper_detected():
     led = Ledger()
     led.append("declaration", {"tool": "x"})
     led.append("report", {"findings": 0})
-    assert led.verify() == []
+    assert led.verify(UNANCHORED) == []
     # Tamper with an early block
     led._blocks[0]["record"]["tool"] = "y"
-    problems = led.verify()
+    problems = led.verify(UNANCHORED)
     assert problems, "tampering must be detected"
 
 
@@ -36,9 +36,9 @@ def test_mid_chain_tamper_detected():
     led = Ledger()
     for i in range(4):
         led.append("observation", {"i": i})
-    assert led.verify() == []
+    assert led.verify(UNANCHORED) == []
     led._blocks[2]["record"]["i"] = 999
-    assert led.verify()
+    assert led.verify(UNANCHORED)
 
 
 def test_roundtrip_dump_load(tmp_path):
@@ -51,7 +51,7 @@ def test_roundtrip_dump_load(tmp_path):
     assert data["version"] == "0.2"
     loaded = Ledger.load(str(out))
     assert len(loaded) == 1
-    assert loaded.verify() == []
+    assert loaded.verify(UNANCHORED) == []
 
 
 def test_load_rejects_foreign_ledger(tmp_path):
